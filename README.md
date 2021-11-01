@@ -7,7 +7,7 @@ physics simulation from scratch with SDL C library
  
  -make sure SDL is installed
  
- -$ gcc -lSDL2 -lSDL2_image -lSDL2_ttf -lm
+ -$ gcc screen.c -lSDL2 -lSDL2_image -lSDL2_ttf -lm
  
  # Execution
  execute the ./output with no arguments
