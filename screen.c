@@ -83,7 +83,7 @@ void physics(Entity *entities[], SDL_Renderer *screen)
     {
         double speedcoef = 0.9;
         double accelcoef = 0.9;
-        double chargeConstant = 0.1;
+        double chargeConstant = 0.2;
         Entity *currentEntity = entities[i];
         acceleration receivedForce = newAcceleration(0, 0);
         for (int k = 0; k < numberOfEntities; k++)
@@ -94,13 +94,10 @@ void physics(Entity *entities[], SDL_Renderer *screen)
             double xdistance = currentEntity->position.x - otherEntity->position.x;
             double ydistance = currentEntity->position.y - otherEntity->position.y;
             double distance = sqrt((otherEntity->position.x - currentEntity->position.x) * (otherEntity->position.x - currentEntity->position.x) + (otherEntity->position.y - currentEntity->position.y) * (otherEntity->position.y - currentEntity->position.y));
-            receivedForce.x += (otherEntity->charge * currentEntity->charge * chargeConstant * xdistance) / distance;
-            receivedForce.y += (otherEntity->charge * currentEntity->charge * chargeConstant * ydistance) / distance;
+            receivedForce.x += (otherEntity->charge * currentEntity->charge * chargeConstant * xdistance) / (distance*distance);
+            receivedForce.y += (otherEntity->charge * currentEntity->charge * chargeConstant * ydistance) / (distance*distance);
         }
-        //double speedVector = sqrt(currentEntity->speed.x * currentEntity->speed.x + currentEntity->speed.y * currentEntity->speed.y);
-        // SDL_SetRenderDrawColor(screen, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        // SDL_RenderDrawLine(screen,currentEntity->position.x,currentEntity->position.y,currentEntity->position.x+receivedForce.x,currentEntity->position.y+receivedForce.y);
-        // SDL_SetRenderDrawColor(screen, 0, 0, 0, SDL_ALPHA_TRANSPARENT);
+
         currentEntity->position.x += currentEntity->speed.x;
         currentEntity->position.y += currentEntity->speed.y;
         currentEntity->speed.x += (currentEntity->acceleration.x);
@@ -192,13 +189,12 @@ void Render(Entity *entities[], SDL_Renderer *screen)
         Message_rect.w = 100;
         Message_rect.h = 100;
         double accelerationModule = sqrt(entities[i]->acceleration.x * entities[i]->acceleration.x + entities[i]->acceleration.y * entities[i]->acceleration.y);
-        double g=(accelerationModule + 1);
         int intensity=(accelerationModule/0.73)*255;
-        double xvector = (entities[i]->acceleration.x) * g;
-        double yvector = (entities[i]->acceleration.y) * g;
+        double xvector = (entities[i]->acceleration.x) ;
+        double yvector = (entities[i]->acceleration.y) ;
         SDL_SetRenderDrawColor(screen, intensity, 255-intensity, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderCopy(screen, Message, NULL, &(Message_rect));
-        SDL_RenderDrawLine(screen, dest.x + 16, dest.y + 16, (int)(dest.x + 16 + xvector * 200), (int)(dest.y + 16 + yvector * 200));
+        SDL_RenderDrawLine(screen, (entities[i]->position.x), (entities[i]->position.y), (int)(entities[i]->position.x + xvector * 300), (int)(entities[i]->position.y + yvector * 300));
         SDL_SetRenderDrawColor(screen, 0, 0, 0, SDL_ALPHA_TRANSPARENT);
 
         switch (entities[i]->charge)
@@ -238,15 +234,14 @@ int main(int argc, char *argv[])
     Entity *EntityList[20];
     SDL_Texture *positiveTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("positive.png"));
     SDL_Texture *negativeTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("negative.png"));
-    Entity player = newEntity("player", positive, SDL_TRUE, 1300 / 3, 700 / 2, positiveTexture);
+    Entity player = newEntity("player", positive, SDL_TRUE, 1300 / 4, 700 / 2, positiveTexture);
     EntityList[0] = &player;
-    Entity particle = newEntity("particle", negative, SDL_TRUE, 1300 * 2 / 3, 700 / 2, positiveTexture);
+    Entity particle = newEntity("particle", negative, SDL_TRUE, 1300 * 2 / 4, 700 / 2, negativeTexture);
     EntityList[1] = &particle;
-    //Entity particle2 = newEntity("particle", negative, SDL_TRUE, (700), 700 / 3, positiveTexture);
-    //EntityList[2] = &particle2;
+    Entity particle2 = newEntity("particle", negative, SDL_TRUE, 1300 * 3 / 4, 700 / 2, negativeTexture);
+    EntityList[2] = &particle2;
     while (!close)
     {
-
         physics(EntityList, renderer);
         Render(EntityList, renderer);
         manageKeyboard(EntityList, event);
