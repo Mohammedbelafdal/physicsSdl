@@ -1,6 +1,6 @@
 # Physics with SDL
 
-physics simulation from scratch with SDL C library
+simple particle simulation from scratch with SDL C library
 
 
  # compilation instruction
