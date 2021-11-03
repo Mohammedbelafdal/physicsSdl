@@ -7,6 +7,25 @@
 #include <SDL2/SDL_ttf.h>
 #include <gcrypt.h>
 #include <math.h>
+
+void get_text_and_rect(SDL_Renderer *renderer, int x, int y, char *text, TTF_Font *font, SDL_Texture **texture, SDL_Rect *rect)
+{
+    int text_width;
+    int text_height;
+    SDL_Surface *surface;
+    SDL_Color textColor = {255, 255, 255, 0};
+
+    surface = TTF_RenderText_Solid(font, text, textColor);
+    *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    text_width = surface->w;
+    text_height = surface->h;
+    SDL_FreeSurface(surface);
+    rect->x = x;
+    rect->y = y;
+    rect->w = text_width;
+    rect->h = text_height;
+}
+
 int numberOfEntities = 0;
 SDL_Color White;
 struct position
@@ -71,31 +90,32 @@ Entity newEntity(char *name, charge charge, SDL_bool isVisible, double positionx
     Instance.swiftness = 2;
     Instance.charge = charge;
     Instance.id = 0;
-    Instance.hitbox.w = 100;
-    Instance.hitbox.h = 100;
+    Instance.hitbox.w = 64;
+    Instance.hitbox.h = 64;
     SDL_QueryTexture(texture, NULL, NULL, &Instance.hitbox.w, &Instance.hitbox.h);
     numberOfEntities++;
     return Instance;
 }
-void physics(Entity *entities[], SDL_Renderer *screen)
+void physics(Entity entities[], SDL_Renderer *screen)
 {
     for (int i = 0; i < numberOfEntities; i++)
     {
         double speedcoef = 0.9;
         double accelcoef = 0.9;
         double chargeConstant = 0.2;
-        Entity *currentEntity = entities[i];
+        Entity *currentEntity = &entities[i];
         acceleration receivedForce = newAcceleration(0, 0);
-        for (int k = 0; k < numberOfEntities; k++)
+        for (int k = 0; k < numberOfEntities; k++) //interactions
         {
-            Entity *otherEntity = entities[k];
-            if (k == i)
-                continue;
-            double xdistance = currentEntity->position.x - otherEntity->position.x;
-            double ydistance = currentEntity->position.y - otherEntity->position.y;
-            double distance = sqrt((otherEntity->position.x - currentEntity->position.x) * (otherEntity->position.x - currentEntity->position.x) + (otherEntity->position.y - currentEntity->position.y) * (otherEntity->position.y - currentEntity->position.y));
-            receivedForce.x += (otherEntity->charge * currentEntity->charge * chargeConstant * xdistance) / (distance*distance);
-            receivedForce.y += (otherEntity->charge * currentEntity->charge * chargeConstant * ydistance) / (distance*distance);
+            if (k != i)
+            {
+                Entity *otherEntity = &entities[k];
+                double xdistance = currentEntity->position.x - otherEntity->position.x;
+                double ydistance = currentEntity->position.y - otherEntity->position.y;
+                double distance = sqrt((otherEntity->position.x - currentEntity->position.x) * (otherEntity->position.x - currentEntity->position.x) + (otherEntity->position.y - currentEntity->position.y) * (otherEntity->position.y - currentEntity->position.y));
+                receivedForce.x += (otherEntity->charge * currentEntity->charge * chargeConstant * xdistance) / (distance * distance);
+                receivedForce.y += (otherEntity->charge * currentEntity->charge * chargeConstant * ydistance) / (distance * distance);
+            }
         }
 
         currentEntity->position.x += currentEntity->speed.x;
@@ -108,9 +128,11 @@ void physics(Entity *entities[], SDL_Renderer *screen)
         currentEntity->acceleration.y = accelcoef * (currentEntity->acceleration.y) + receivedForce.y;
     }
 }
-void manageKeyboard(Entity *entities[], SDL_Event event)
+void manageKeyboard(Entity entities[1024], SDL_Event event, SDL_Renderer *screen)
 {
-    Entity *player = entities[0];
+    Entity *player = &entities[0];
+    SDL_Texture *positiveTexture = SDL_CreateTextureFromSurface(screen, IMG_Load("positive.png"));
+    SDL_Texture *negativeTexture = SDL_CreateTextureFromSurface(screen, IMG_Load("negative.png"));
     int x;
     int y;
     while (SDL_PollEvent(&event))
@@ -123,20 +145,20 @@ void manageKeyboard(Entity *entities[], SDL_Event event)
             abort();
             break;
         case SDL_MOUSEBUTTONDOWN:
-        switch (event.button.button)
-        {
-        case SDL_BUTTON_LEFT:
-
             SDL_GetMouseState(&x, &y);
-            entities[0]->position.x = x;
-            entities[0]->position.y = y;
-            break;
-        case SDL_BUTTON_RIGHT:
-            SDL_GetMouseState(&x, &y);
-            entities[1]->position.x = x;
-            entities[1]->position.y = y;
-            break;
-        };
+            switch (event.button.button)
+            {
+            case SDL_BUTTON_LEFT:
+                Entity particle=newEntity("particle", negative, SDL_TRUE, x, y, negativeTexture);
+                entities[numberOfEntities-1]=particle;
+                printf("created %d\n particle", entities[numberOfEntities].charge);
+                break;
+            case SDL_BUTTON_RIGHT:
+                particle=newEntity("particle", positive, SDL_TRUE, x, y, positiveTexture);
+                entities[numberOfEntities-1]=particle;
+                printf("created %d\n particle", entities[numberOfEntities].charge);
+                break;
+            };
         case SDL_KEYDOWN:
             // keyboard API for key pressed
             switch (event.key.keysym.scancode)
@@ -167,9 +189,8 @@ void manageKeyboard(Entity *entities[], SDL_Event event)
         }
     }
 }
-void Render(Entity *entities[], SDL_Renderer *screen)
+void Render(Entity entities[], SDL_Renderer *screen)
 {
-    TTF_Font *defaultFont = TTF_OpenFont("Roboto-Medium.ttf", 240);
     SDL_Texture *positiveTexture = SDL_CreateTextureFromSurface(screen, IMG_Load("positive.png"));
     SDL_Texture *negativeTexture = SDL_CreateTextureFromSurface(screen, IMG_Load("negative.png"));
     //SDL_Texture *neutralTexture = SDL_CreateTextureFromSurface(screen, IMG_Load("neutral.png"));
@@ -177,27 +198,20 @@ void Render(Entity *entities[], SDL_Renderer *screen)
     for (int i = 0; i < numberOfEntities; i++)
     {
         SDL_Rect dest;
-        SDL_Surface *surfaceMessage = TTF_RenderText_Solid(defaultFont, "Test lazy", White);
-        SDL_Texture *Message = SDL_CreateTextureFromSurface(screen, surfaceMessage);
-        SDL_Rect Message_rect;
-        dest.w = entities[i]->hitbox.w;
-        dest.h = entities[i]->hitbox.h;
-        dest.x = (entities[i]->position.x) - (entities[i]->hitbox.w / 2);
-        dest.y = (entities[i]->position.y) - (entities[i]->hitbox.h / 2);
-        Message_rect.x = 0;
-        Message_rect.y = 0;
-        Message_rect.w = 100;
-        Message_rect.h = 100;
-        double accelerationModule = sqrt(entities[i]->acceleration.x * entities[i]->acceleration.x + entities[i]->acceleration.y * entities[i]->acceleration.y);
-        int intensity=(accelerationModule/0.73)*255;
-        double xvector = (entities[i]->acceleration.x) ;
-        double yvector = (entities[i]->acceleration.y) ;
-        SDL_SetRenderDrawColor(screen, intensity, 255-intensity, 0, SDL_ALPHA_OPAQUE);
-        SDL_RenderCopy(screen, Message, NULL, &(Message_rect));
-        SDL_RenderDrawLine(screen, (entities[i]->position.x), (entities[i]->position.y), (int)(entities[i]->position.x + xvector * 300), (int)(entities[i]->position.y + yvector * 300));
+
+        dest.w = entities[i].hitbox.w;
+        dest.h = entities[i].hitbox.h;
+        dest.x = (entities[i].position.x) - (entities[i].hitbox.w / 2);
+        dest.y = (entities[i].position.y) - (entities[i].hitbox.h / 2);
+        double accelerationModule = sqrt(entities[i].acceleration.x * entities[i].acceleration.x + entities[i].acceleration.y * entities[i].acceleration.y);
+        int intensity = (accelerationModule / 0.73) * 255;
+        double xvector = (entities[i].acceleration.x);
+        double yvector = (entities[i].acceleration.y);
+        SDL_SetRenderDrawColor(screen, intensity, 255 - intensity, 0, SDL_ALPHA_OPAQUE);
+        SDL_RenderDrawLine(screen, (entities[i].position.x), (entities[i].position.y), (int)(entities[i].position.x + xvector * 300), (int)(entities[i].position.y + yvector * 300));
         SDL_SetRenderDrawColor(screen, 0, 0, 0, SDL_ALPHA_TRANSPARENT);
 
-        switch (entities[i]->charge)
+        switch (entities[i].charge)
         {
         case positive:
             SDL_RenderCopy(screen, positiveTexture, NULL, &(dest));
@@ -231,20 +245,22 @@ int main(int argc, char *argv[])
     SDL_Renderer *renderer = SDL_CreateRenderer(win, -1, render_flags);
     SDL_Event event;
     int close = 0;
-    Entity *EntityList[20];
+    Entity EntityList[1024];
     SDL_Texture *positiveTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("positive.png"));
     SDL_Texture *negativeTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("negative.png"));
-    Entity player = newEntity("player", positive, SDL_TRUE, 1300 / 4, 700 / 2, positiveTexture);
-    EntityList[0] = &player;
-    Entity particle = newEntity("particle", negative, SDL_TRUE, 1300 * 2 / 4, 700 / 2, negativeTexture);
-    EntityList[1] = &particle;
-    Entity particle2 = newEntity("particle", negative, SDL_TRUE, 1300 * 3 / 4, 700 / 2, negativeTexture);
-    EntityList[2] = &particle2;
+    Entity particle;
+    for (int x = 0; x < 6; x++)
+    {
+         particle=newEntity("particle", negative, SDL_TRUE, 1300*x/6, 700 / 3, negativeTexture);
+         EntityList[x*2]=particle;
+         particle=newEntity("particle", positive, SDL_TRUE, 1300*x/6, 700 *2/ 3, positiveTexture);
+         EntityList[x*2+1]=particle;
+    }
     while (!close)
     {
         physics(EntityList, renderer);
         Render(EntityList, renderer);
-        manageKeyboard(EntityList, event);
+        manageKeyboard(EntityList, event, renderer);
         SDL_Delay(1000 / 128);
     }
 
