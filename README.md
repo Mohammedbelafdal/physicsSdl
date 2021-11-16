@@ -8,12 +8,14 @@ simple particle simulation from scratch with SDL C library
  
  -make sure SDL is installed
  
- -$ gcc screen.c -lSDL2 -lSDL2_image -lSDL2_ttf -lm
+ -$ gcc physi.c -lSDL2 -lSDL2_image -lSDL2_ttf -lm
  
  # Execution
  
  execute the ./output with no arguments
  
- Control a particule with arrow keys
+ -Control the first particule with arrow keys
  
- Left/Right click to create a particule
+ -Left/Right click to create a particule
+ 
+ -Use P to pause, K/j to increase or decrease the positive charge constant
