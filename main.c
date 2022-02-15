@@ -7,7 +7,6 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_timer.h>
 #include <SDL2/SDL_ttf.h>
-#include <gcrypt.h>
 #include <math.h>
 #include <SDL2/SDL2_rotozoom.h>
 
