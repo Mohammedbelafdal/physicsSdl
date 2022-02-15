@@ -8,7 +8,7 @@ simple particle simulation from scratch with SDL C library
  
  -make sure SDL is installed
  
- -$ gcc physi.c -lSDL2 -lSDL2_image -lSDL2_ttf -lm
+ -$ gcc roto.c -lm -lSDL2 -lSDL2_image -lSDL2_gfx
  
  # Execution
  
